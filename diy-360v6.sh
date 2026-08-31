@@ -36,7 +36,7 @@ git_sparse_clone main https://github.com/haiibo/packages luci-app-onliner
 # Themes（Argon）
 git clone --depth=1 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
 git clone --depth=1 https://github.com/jerrykuku/luci-app-argon-config package/luci-app-argon-config
-cp -f $GITHUB_WORKSPACE/images/bg1.jpg package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.jpg
+[ -f $GITHUB_WORKSPACE/images/bg1.jpg ] && cp -f $GITHUB_WORKSPACE/images/bg1.jpg package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.jpg || true
 
 # 修改版本为编译日期
 date_version=$(date +"%y.%m.%d")
