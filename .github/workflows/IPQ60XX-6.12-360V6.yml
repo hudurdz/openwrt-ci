@@ -90,6 +90,10 @@ jobs:
       run: |
         cd $OPENWRT_PATH
         ./scripts/feeds update -a
+        git clone --depth 1 https://github.com/sbwml/openwrt_pkgs.git package/new/custom
+        mv package/new/custom/luci-app-netspeedtest  package/new
+        mv package/new/custom/speedtest-cli package/new
+        rm -rf package/new/custom
         ./scripts/feeds install -a
   
     - name: Load Custom Configuration(加载自定义配置)
@@ -99,6 +103,8 @@ jobs:
         chmod +x $DIY_SCRIPT
         cd $OPENWRT_PATH
         $GITHUB_WORKSPACE/$DIY_SCRIPT
+        echo "######## 关键包激活检查 ########"
+        grep -E "CONFIG_PACKAGE_(luci-app-passwall2|luci-app-accesscontrol|luci-proto-wireguard|luci-app-onliner)=y" .config || true
 
     - name: Download DL Package(下载DL软件包)
       run: |
