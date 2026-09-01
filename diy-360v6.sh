@@ -2,7 +2,7 @@
 
 # ============================================================
 # 360V6 专用精简脚本（LiBwrt 6.12 / immortalwrt 系）
-# 稳定优先：只保留科学上网 PassWall2 + 在线用户 + Argon 主题
+# v3 代理版：clone 走 gh-proxy 代理 + 拉取后完整性校验（缺失即红）
 # ============================================================
 
 # 修改默认IP 为 10.0.7.1
@@ -19,6 +19,7 @@ rm -rf feeds/luci/applications/luci-app-netdata
 # Git稀疏克隆，只克隆指定目录到本地
 function git_sparse_clone() {
   branch="$1" repourl="$2" && shift 2
+  [ -n "$PROXY_PREFIX" ] && repourl="${PROXY_PREFIX}${repourl}"
   git clone --depth=1 -b $branch --single-branch --filter=blob:none --sparse $repourl
   repodir=$(echo $repourl | awk -F '/' '{print $(NF)}')
   cd $repodir && git sparse-checkout set $@
@@ -26,17 +27,36 @@ function git_sparse_clone() {
   cd .. && rm -rf $repodir
 }
 
-# 科学上网插件（仅 PassWall2）
-git clone --depth=1 https://github.com/xiaorouji/openwrt-passwall-packages package/openwrt-passwall
-git clone --depth=1 https://github.com/xiaorouji/openwrt-passwall2 package/luci-app-passwall2
+# 代理前缀（gh-proxy 镜像，绕过 GitHub 对 Actions 的限流）
+PROXY_PREFIX="https://gh-proxy.com/"
 
-# 在线用户（查看在线设备 + nlbwmon）
+# 科学上网插件（仅 PassWall2，走代理）
+git clone --depth=1 ${PROXY_PREFIX}https://github.com/xiaorouji/openwrt-passwall-packages package/openwrt-passwall
+git clone --depth=1 ${PROXY_PREFIX}https://github.com/xiaorouji/openwrt-passwall2 package/luci-app-passwall2
+
+# 在线用户（查看在线设备 + nlbwmon，走代理）
 git_sparse_clone main https://github.com/haiibo/packages luci-app-onliner
 
-# Themes（Argon）
-git clone --depth=1 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
-git clone --depth=1 https://github.com/jerrykuku/luci-app-argon-config package/luci-app-argon-config
+# Themes（Argon，走代理）
+git clone --depth=1 ${PROXY_PREFIX}https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
+git clone --depth=1 ${PROXY_PREFIX}https://github.com/jerrykuku/luci-app-argon-config package/luci-app-argon-config
 [ -f $GITHUB_WORKSPACE/images/bg1.jpg ] && cp -f $GITHUB_WORKSPACE/images/bg1.jpg package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.jpg || true
+
+# ====== 拉取完整性校验：该有的库必须存在，缺失立即失败 ======
+echo "######## 源码拉取校验 ########"
+pending=0
+for d in openwrt-passwall luci-app-passwall2 luci-app-onliner luci-theme-argon luci-app-argon-config; do
+  if [ -d "package/$d" ]; then
+    echo "✅ $d 已就位"
+  else
+    echo "❌ $d 缺失！"
+    pending=1
+  fi
+done
+if [ $pending -eq 1 ]; then
+  echo "ERROR: 关键源码拉取失败，中止编译"
+  exit 1
+fi
 
 # 修改版本为编译日期
 date_version=$(date +"%y.%m.%d")
