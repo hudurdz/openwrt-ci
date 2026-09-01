@@ -2,7 +2,7 @@
 
 # ============================================================
 # 360V6 专用精简脚本（LiBwrt 6.12 / immortalwrt 系）
-# v3 直连版：clone 直连 github.com + 拉取后完整性校验（缺失即红）
+# v4: PassWall2 官方新组织 + deviceid 设备管控 + 三优化
 # ============================================================
 
 # 修改默认IP 为 10.0.7.1
@@ -26,12 +26,27 @@ function git_sparse_clone() {
   cd .. && rm -rf $repodir
 }
 
-# 科学上网插件（仅 PassWall2，直连）
-git clone --depth=1 https://github.com/xiaorouji/openwrt-passwall-packages package/openwrt-passwall
-git clone --depth=1 https://github.com/xiaorouji/openwrt-passwall2 package/luci-app-passwall2
+# 用 codeload 下载 tar 包（比 git clone 更稳，绕开 GitHub clone 限流）
+function dl_tar() {
+  local org="$1" repo="$2" branch="$3" dest="$4"
+  echo "== 下载 ${org}/${repo} (${branch}) 到 ${dest} =="
+  mkdir -p package
+  wget -qO- "https://codeload.github.com/${org}/${repo}/tar.gz/refs/heads/${branch}" \
+    | tar xz -C package/ || { echo "❌ ${repo} 下载失败"; return 1; }
+  mv "package/${repo}-${branch}" "package/${dest}" || { echo "❌ ${repo} 解压改名失败"; return 1; }
+  echo "✅ ${repo} 已就位 -> package/${dest}"
+  return 0
+}
+
+# 科学上网插件（PassWall2，官方新组织 Openwrt-Passwall，main 分支）
+dl_tar Openwrt-Passwall openwrt-passwall2 main luci-app-passwall2
+dl_tar Openwrt-Passwall openwrt-passwall-packages main openwrt-passwall
 
 # 在线用户（查看在线设备 + nlbwmon）
 git_sparse_clone main https://github.com/haiibo/packages luci-app-onliner
+
+# 设备管控（deviceid：识别 + 断网/恢复）
+dl_tar wyndam luci-app-deviceid main luci-app-deviceid
 
 # Themes（Argon）
 git clone --depth=1 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
@@ -41,7 +56,7 @@ git clone --depth=1 https://github.com/jerrykuku/luci-app-argon-config package/l
 # ====== 拉取完整性校验：该有的库必须存在，缺失立即失败 ======
 echo "######## 源码拉取校验 ########"
 pending=0
-for d in openwrt-passwall luci-app-passwall2 luci-app-onliner luci-theme-argon luci-app-argon-config; do
+for d in openwrt-passwall luci-app-passwall2 luci-app-onliner luci-app-deviceid luci-theme-argon luci-app-argon-config; do
   if [ -d "package/$d" ]; then
     echo "✅ $d 已就位"
   else

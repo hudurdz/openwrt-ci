@@ -104,7 +104,7 @@ jobs:
         cd $OPENWRT_PATH
         $GITHUB_WORKSPACE/$DIY_SCRIPT
         echo "######## 关键包激活检查 ########"
-        grep -E "CONFIG_PACKAGE_(luci-app-passwall2|luci-app-accesscontrol|luci-proto-wireguard|luci-app-onliner)=y" .config || true
+        grep -E "CONFIG_PACKAGE_(luci-app-passwall2|luci-app-deviceid|luci-app-eqos|luci-proto-wireguard|luci-app-onliner)=y" .config || true
 
     - name: Download DL Package(下载DL软件包)
       run: |
